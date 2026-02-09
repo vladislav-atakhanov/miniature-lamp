@@ -1,4 +1,4 @@
-use keys::Key;
+use keys::keys::Key;
 use s_expression::{Expr, Expr::*};
 use std::collections::HashMap;
 
@@ -38,32 +38,19 @@ pub fn parse<'a>(items: &[Expr<'a>]) -> Result<Vial, String> {
         let key: Key = first
             .parse()
             .map_err(|_| format!("Unknown key {}", first))?;
-        let item = if row.len() == 3 {
-            Some(Item(
-                row[1]
-                    .parse()
-                    .map_err(|_| format!("Unknown value {}", row[1]))?,
-                row[2]
-                    .parse()
-                    .map_err(|_| format!("Unknown value {}", row[2]))?,
-                Type::Key,
-            ))
-        } else if row.len() == 4 {
-            Some(Item(
-                row[1]
-                    .parse()
-                    .map_err(|_| format!("Unknown value {}", row[1]))?,
-                row[2]
-                    .parse()
-                    .map_err(|_| format!("Unknown value {}", row[2]))?,
-                match row[3] {
-                    "e" => Type::Encoder,
+        let item = match row.as_slice() {
+            [_, a, b] | [_, a, b, _] => {
+                let a = a.parse().map_err(|_| format!("Unknown value {}", a))?;
+                let b = b.parse().map_err(|_| format!("Unknown value {}", b))?;
+                let t = match row.get(3) {
+                    Some(&"e") => Type::Encoder,
                     _ => Type::Key,
-                },
-            ))
-        } else {
-            None
+                };
+                Some(Item(a, b, t))
+            }
+            _ => None,
         };
+
         match vial.add(key, item.ok_or(format!("Unexpected {:?}", row))?) {
             None => {}
             _ => return Err(format!("Key {:?} already in map", key)),

@@ -1,4 +1,4 @@
-use keys::Key;
+use keys::keys::Key;
 use s_expression::{Expr, Expr::*};
 
 #[rustfmt::skip]
