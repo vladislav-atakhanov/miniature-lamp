@@ -29,28 +29,37 @@ pub fn deftemplate<'a>(list: Vec<Expr<'a>>) -> Result<Templates<'a>, String> {
 }
 
 pub fn expand<'a>(expr: &Expr<'a>, templates: &'a Templates<'a>) -> Expr<'a> {
-    match expr {
-        Expr::Atom(a) => Expr::Atom(a),
+    let List(list) = expr else {
+        return expr.clone();
+    };
+    let Some(Atom(name)) = list.first() else {
+        return List(list.iter().map(|e| expand(e, templates)).collect());
+    };
+    let Some(template) = templates.get(name) else {
+        return expr.clone();
+    };
+    let args = &list[1..];
+    let mut env = HashMap::new();
+    let Template(params, body) = template;
 
-        Expr::List(list) => {
-            if let Some(Expr::Atom(name)) = list.first() {
-                if let Some(template) = templates.get(name) {
-                    // создаём окружение параметр -> аргумент
-                    let args = &list[1..];
-                    let mut env = std::collections::HashMap::new();
-                    let Template(params, body) = template;
-                    for (param, arg) in params.iter().zip(args.iter()) {
-                        env.insert(*param, expand(arg, templates));
-                    }
-                    // рекурсивно подставляем тело шаблона
-                    return substitute(&body, &env, templates);
-                }
-            }
-
-            // обычный список, рекурсивно раскрываем элементы
-            Expr::List(list.iter().map(|e| expand(e, templates)).collect())
-        }
+    if params.is_empty() {
+        return body.clone();
     }
+    let (regular_params, extra_param) = params.split_at(params.len() - 1);
+    for (param, arg) in regular_params.iter().zip(args.iter()) {
+        env.insert(*param, expand(arg, templates));
+    }
+    let extra_args = &args[regular_params.len()..];
+    let extra_expr_list: Vec<Expr> = extra_args.iter().map(|e| expand(e, templates)).collect();
+    env.insert(
+        *extra_param.first().unwrap(),
+        if extra_expr_list.len() == 1 {
+            extra_expr_list[0].clone()
+        } else {
+            List(extra_expr_list)
+        },
+    );
+    return substitute(&body, &env, templates);
 }
 
 fn substitute<'a>(
@@ -85,14 +94,28 @@ mod tests {
         );
     }
 
+    fn assert<'a>(input: &'a str, output: &'a str, templates: &'a Templates<'a>) {
+        let input = s_expression::from_str(input).unwrap();
+        let output = s_expression::from_str(output).unwrap();
+        assert_eq!(expand(&input, templates).to_string(), output.to_string())
+    }
+
     #[test]
     fn apply_test() {
         let expr = s_expression::from_str("(a (b c) c)").unwrap();
         let list = expr.list().unwrap();
         let templates = &deftemplate(list.clone()).unwrap();
 
-        let input = &s_expression::from_str("(a 1 1)").unwrap();
-        assert_eq!(expand(input, templates).to_string(), "1".to_string())
+        assert("(a 1 1)", "1", templates);
+    }
+
+    #[test]
+    fn apply_template_args() {
+        let expr = s_expression::from_str("(a (b c) c)").unwrap();
+        let list = expr.list().unwrap();
+        let templates = &deftemplate(list.clone()).unwrap();
+
+        assert("(a b c d)", "(c d)", templates);
     }
 
     #[test]
