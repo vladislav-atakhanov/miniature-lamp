@@ -19,13 +19,7 @@ pub fn unwrap<'a>(expr: &'a Expr<'a>, ignore: Option<&HashSet<&str>>) -> Expr<'a
                     return vec![unwrap(item, ignore)];
                 };
                 match *name {
-                    "unwrap" => inner
-                        .iter()
-                        .flat_map(|arg| match unwrap(arg, ignore) {
-                            List(xs) => xs,
-                            x => vec![x],
-                        })
-                        .collect(),
+                    "unwrap" => inner.iter().map(|arg| unwrap(arg, ignore)).collect(),
                     _ => match unwrap(item, ignore) {
                         List(xs) => xs,
                         x => vec![x],
@@ -40,34 +34,43 @@ pub fn unwrap<'a>(expr: &'a Expr<'a>, ignore: Option<&HashSet<&str>>) -> Expr<'a
 mod tests {
     use super::*;
 
+    fn assert(input: &str, output: &str, ignore: Option<&HashSet<&str>>) {
+        let input = s_expression::from_str(input).unwrap();
+        let output = s_expression::from_str(output).unwrap();
+        assert_eq!(unwrap(&input, ignore).to_string(), output.to_string())
+    }
+
     #[test]
     fn unwrap_list() {
-        let expr = s_expression::from_str("(outer (unwrap (arg a)))").unwrap();
-        assert_eq!(unwrap(&expr, None).to_string(), "(outer arg a)".to_string())
+        assert("(outer (unwrap (arg a)))", "(outer (arg a))", None);
     }
 
     #[test]
     fn unwrap_atoms() {
-        let expr = s_expression::from_str("(outer (unwrap a b c d))").unwrap();
-        assert_eq!(
-            unwrap(&expr, None).to_string(),
-            "(outer a b c d)".to_string()
-        )
+        assert("(outer (unwrap a b c d) e f)", "(outer a b c d e f)", None);
     }
+
     #[test]
-    fn unwrap_ignore() {
-        let expr = s_expression::from_str("(outer (unwrap a b c d) (ignore some))").unwrap();
-        assert_eq!(
-            unwrap(&expr, Some(&HashSet::from(["ignore"]))).to_string(),
-            "(outer a b c d)".to_string()
-        )
+    fn real_unwrap() {
+        assert(
+            r#"((unwrap
+                (defalias a b)
+                (deflayer c (unwrap d e))
+            ))"#,
+            r#"(
+                (defalias a b)
+                (deflayer c d e)
+            )"#,
+            None,
+        );
     }
+
     #[test]
-    fn unwrap_ignore2() {
-        let expr = s_expression::from_str("(ignore (unwrap a b c d))").unwrap();
-        assert_eq!(
-            unwrap(&expr, Some(&HashSet::from(["ignore"]))).to_string(),
-            "()".to_string()
-        )
+    fn ignore() {
+        assert(
+            "(outer (ignore some) (unwrap a b c d))",
+            "(outer a b c d)",
+            Some(&HashSet::from(["ignore"])),
+        );
     }
 }
