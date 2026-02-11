@@ -44,6 +44,19 @@ impl Key {
             _ => unreachable!(),
         }
     }
+    pub fn is_modifier(&self) -> bool {
+        matches!(
+            self,
+            Self::LeftAlt
+                | Self::RightAlt
+                | Self::LeftCtrl
+                | Self::RightCtrl
+                | Self::LeftMeta
+                | Self::RightMeta
+                | Self::LeftShift
+                | Self::RightShift
+        )
+    }
 }
 
 impl FromStr for Key {

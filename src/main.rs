@@ -1,8 +1,8 @@
 mod layout;
-use std::collections::HashMap;
 
 use keys::keys::{Key, KeyIndex};
-use layout::Layout;
+use layout::{Layout, Override};
+use std::collections::HashMap;
 
 fn main() -> Result<(), String> {
     env_logger::init();
@@ -15,8 +15,27 @@ fn main() -> Result<(), String> {
         let mut keys: Vec<_> = l.keys.iter().collect();
         keys.sort_by_key(|(k, _)| *k);
         for (k, a) in keys {
-            println!("{:?} => {:?}", keys_by_index.get(k).unwrap(), a);
+            let key = keys_by_index.get(k).unwrap();
+            println!("{:?} => {:?}", key, a);
+            l.overrides.iter().filter(|o| o.key == *k).for_each(
+                |Override {
+                     mods,
+                     key: _,
+                     action,
+                 }| {
+                    println!(
+                        "\t{}+{:?} => {:?}",
+                        mods.iter()
+                            .map(|x| format!("{:?}", x))
+                            .collect::<Vec<_>>()
+                            .join("+"),
+                        key,
+                        action
+                    )
+                },
+            );
         }
+
         println!();
     });
 

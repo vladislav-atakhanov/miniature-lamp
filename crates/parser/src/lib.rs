@@ -5,10 +5,12 @@ use keys::keys::{Key, KeyIndex};
 mod matrix;
 mod vial;
 
+pub use vial::Vial;
+
 #[derive(Debug, Default)]
 pub struct Keyboard<'a> {
     pub matrix: matrix::Matrix,
-    pub vial: vial::Vial,
+    pub vial: Vial,
     pub source: HashMap<Key, KeyIndex>,
     pub meta: &'a str,
 }

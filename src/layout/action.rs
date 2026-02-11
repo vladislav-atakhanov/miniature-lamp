@@ -1,4 +1,5 @@
 use keys::keys::Key;
+use log::warn;
 use s_expression::Expr::{self, *};
 
 #[derive(Debug, Clone)]
@@ -29,13 +30,9 @@ impl Action {
             '/' => Self::Tap(Key::KpSlash),
             '0'..='9' => Self::Tap(Key::from_digit(ch)),
 
-            _ => {
+            x if x.is_ascii() && !x.is_control() => {
                 let mut keys = vec![Self::Hold(Key::LeftAlt)];
-
-                if !ch.is_ascii() || ch.is_control() {
-                    return Err(format!("Non-ASCII character {:?}", ch));
-                }
-                let digits = (ch as u8)
+                let digits = (x as u8)
                     .to_string()
                     .chars()
                     .map(|c| {
@@ -51,6 +48,9 @@ impl Action {
 
                 Action::Macro(keys)
             }
+            _ => {
+                return Err(format!("Non-ASCII character {:?} ({})", ch, ch as u32));
+            }
         })
     }
 
@@ -58,9 +58,15 @@ impl Action {
         Ok(match expr {
             Atom(e) => {
                 if let Some(d) = e.strip_prefix(".")
-                    && d.len() == 1
+                    && d.len() > 0
                 {
-                    Self::unicode(d.chars().next().ok_or("Expected symbol".to_string())?)?
+                    match Self::unicode(d.chars().next().ok_or("Expected symbol".to_string())?) {
+                        Ok(a) => a,
+                        Err(msg) => {
+                            warn!("{}", msg);
+                            Self::NoAction
+                        }
+                    }
                 } else if let Some(d) = e.strip_prefix("@")
                     && e.len() > 1
                 {

@@ -1,4 +1,5 @@
 use keys::keys::{Key, KeyIndex};
+use parser::Keyboard;
 use s_expression::Expr::*;
 use std::{collections::HashMap, str::FromStr};
 
@@ -9,15 +10,17 @@ mod template;
 mod unwrap;
 pub use layer::Layer;
 
-use crate::layout::action::Action;
+use action::Action;
+pub use layer::Override;
 use preprocess::preprocess;
 
 #[derive(Debug, Default)]
-pub struct Layout {
+pub struct Layout<'a> {
     pub keys: HashMap<Key, KeyIndex>,
     pub layers: HashMap<String, Layer>,
+    pub keyboard: Keyboard<'a>,
 }
-impl Layout {
+impl Layout<'_> {
     fn new() -> Self {
         Self::default()
     }
@@ -74,16 +77,12 @@ impl Layout {
         if parent.name == name {
             Ok(parent.clone())
         } else {
-            Ok(Layer {
-                name: name,
-                parent: parent.name.clone(),
-                keys: parent.keys.clone(),
-            })
+            Ok(parent.child(name))
         }
     }
 }
 
-impl FromStr for Layout {
+impl FromStr for Layout<'_> {
     type Err = String;
     fn from_str(content: &str) -> Result<Self, Self::Err> {
         let content = format!("({})", content);
@@ -134,7 +133,6 @@ impl FromStr for Layout {
                                 .chunks(2)
                                 .map(|x| {
                                     let [Atom(name), expr] = x else {
-                                        println!("{:?}", x);
                                         return Err(format!("Syntax error: {:?}", x));
                                     };
                                     let action = Action::from_expr(expr)?;
@@ -143,7 +141,48 @@ impl FromStr for Layout {
                                 .collect::<Result<Vec<_>, _>>()?,
                         );
                     }
-                    "defoverride" => {}
+                    "defoverride" => {
+                        let (name, parent, params) = Layer::get_name(params)?;
+                        let mut layer = layout.layer_from(parent.to_string(), name.to_string())?;
+                        layer.overrides = params
+                            .chunks(2)
+                            .map(|x| {
+                                let [Atom(src), expr] = x else {
+                                    println!("{:?}", x);
+                                    return Err(format!("Syntax error: {:?}", x));
+                                };
+                                let Action::Multi(src) = Action::from_expr(&Atom(*src))? else {
+                                    return Err(format!("Expected hotkey, found {:?}", src));
+                                };
+                                let src: Vec<_> = src
+                                    .into_iter()
+                                    .map(|action| match action {
+                                        Action::Tap(key) => Ok(key),
+                                        x => Err(format!("Expected tap, found {:?}", x)),
+                                    })
+                                    .collect::<Result<_, _>>()?;
+
+                                let [mods @ .., key] = src.as_slice() else {
+                                    return Err(format!("Expected hotkey, found {:?}", src));
+                                };
+
+                                check_all_with(mods, |k| k.is_modifier())
+                                    .map_err(|k| format!("Key {:?} is not modifier", k))?;
+
+                                Ok(Override {
+                                    key: layout
+                                        .keys
+                                        .get(key)
+                                        .ok_or(format!("Key {:?} is not found", key))?
+                                        .clone(),
+                                    action: Action::from_expr(expr)?,
+                                    mods: mods.to_vec(),
+                                })
+                            })
+                            .collect::<Result<_, _>>()?;
+                        layout.layers.insert(layer.name.to_string(), layer);
+                    }
+
                     _ => return Err(format!("Unexpected {}", name)),
                 }
                 Ok(())
@@ -151,4 +190,13 @@ impl FromStr for Layout {
         layout.prepare_layers(&aliases);
         Ok(layout)
     }
+}
+
+fn check_all_with<T, F>(src: &[T], predicate: F) -> Result<(), &T>
+where
+    F: Fn(&T) -> bool,
+{
+    src.iter()
+        .find(|item| !predicate(item))
+        .map_or(Ok(()), |bad| Err(bad))
 }
