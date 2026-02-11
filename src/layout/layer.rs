@@ -1,0 +1,101 @@
+use crate::layout::action::Action;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::format,
+    str::FromStr,
+};
+
+use keys::keys::{Key, KeyIndex};
+use s_expression::Expr::{self, *};
+
+#[derive(Debug, Default, Clone)]
+pub struct Layer {
+    pub name: String,
+    pub parent: String,
+    pub keys: HashMap<KeyIndex, Action>,
+}
+
+fn get_layer_meta<'a>(
+    params: &'a [Expr<'a>],
+) -> Result<(&'a str, &'a str, &'a [Expr<'a>]), String> {
+    let [name, params @ ..] = params else {
+        return Err("Syntax error".to_string());
+    };
+    let (name, parent) = match name {
+        Atom(x) => match *x {
+            "default" => ("default", "src"),
+            "src" => return Err("Cannot override src layer".to_string()),
+            name => (name, "default"),
+        },
+        List(xs) => {
+            if let [Atom(name), Atom(parent)] = xs.as_slice() {
+                (*name, *parent)
+            } else {
+                return Err("Syntax error".to_string());
+            }
+        }
+    };
+    Ok((
+        name,
+        parent,
+        match params {
+            [List(x)] => x,
+            _ => params,
+        },
+    ))
+}
+
+impl Layer {
+    pub fn from_keyboard(source: &HashMap<Key, KeyIndex>) -> Self {
+        Self {
+            name: "src".to_string(),
+            parent: String::new(),
+            keys: source
+                .iter()
+                .map(|(k, v)| (*v, Action::Tap(k.clone())))
+                .collect(),
+        }
+    }
+    pub fn from_def(params: &[Expr<'_>]) -> Result<Self, String> {
+        let (name, parent, actions) = get_layer_meta(params)?;
+        Ok(Self {
+            name: name.to_string(),
+            parent: parent.to_string(),
+            keys: actions.iter().enumerate().try_fold(
+                HashMap::with_capacity(actions.len()),
+                |mut acc, (i, e)| {
+                    acc.insert(
+                        i.try_into().map_err(|_| "Parse error".to_string())?,
+                        Action::from_expr(e)?,
+                    );
+                    Ok::<HashMap<KeyIndex, Action>, String>(acc)
+                },
+            )?,
+        })
+    }
+    pub fn from_map(
+        params: &[Expr<'_>],
+        index_by_key: &HashMap<Key, KeyIndex>,
+    ) -> Result<Self, String> {
+        let (name, parent, params) = get_layer_meta(params)?;
+        Ok(Layer {
+            name: name.to_string(),
+            parent: parent.to_string(),
+            keys: params.chunks(2).into_iter().try_fold(
+                HashMap::with_capacity(params.len()),
+                |mut acc, v| {
+                    let [Atom(key), expr] = v else {
+                        return Err("Syntax error".to_string());
+                    };
+                    let src: Key = key.parse().map_err(|_| format!("Unknown key {:?}", key))?;
+                    let index = index_by_key
+                        .get(&src)
+                        .ok_or(format!("Index for {:?} not found", src))?;
+                    let action = Action::from_expr(expr)?;
+                    acc.insert(*index, action);
+                    Ok(acc)
+                },
+            )?,
+        })
+    }
+}

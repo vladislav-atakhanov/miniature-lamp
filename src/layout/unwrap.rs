@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use s_expression::Expr::{self, *};
 
-pub fn unwrap<'a>(expr: &'a Expr<'a>, ignore: Option<&HashSet<&str>>) -> Expr<'a> {
+pub fn unwrap<'a>(expr: &Expr<'a>, ignore: Option<&HashSet<&str>>) -> Expr<'a> {
     let List(list) = expr else {
         return expr.clone();
     };

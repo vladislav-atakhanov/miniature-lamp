@@ -28,7 +28,7 @@ pub fn deftemplate<'a>(list: Vec<Expr<'a>>) -> Result<Templates<'a>, String> {
     Ok(templates)
 }
 
-pub fn expand<'a>(expr: &Expr<'a>, templates: &'a Templates<'a>) -> Expr<'a> {
+pub fn expand<'a>(expr: &Expr<'a>, templates: &Templates<'a>) -> Expr<'a> {
     let List(list) = expr else {
         return expr.clone();
     };
@@ -36,7 +36,7 @@ pub fn expand<'a>(expr: &Expr<'a>, templates: &'a Templates<'a>) -> Expr<'a> {
         return List(list.iter().map(|e| expand(e, templates)).collect());
     };
     let Some(template) = templates.get(name) else {
-        return expr.clone();
+        return List(list.iter().map(|e| expand(e, templates)).collect());
     };
     let args = &list[1..];
     let mut env = HashMap::new();
@@ -65,7 +65,7 @@ pub fn expand<'a>(expr: &Expr<'a>, templates: &'a Templates<'a>) -> Expr<'a> {
 fn substitute<'a>(
     expr: &Expr<'a>,
     env: &HashMap<&'a str, Expr<'a>>,
-    templates: &'a Templates<'a>,
+    templates: &Templates<'a>,
 ) -> Expr<'a> {
     match expr {
         Expr::Atom(a) => env.get(a).cloned().unwrap_or_else(|| Expr::Atom(a)),
