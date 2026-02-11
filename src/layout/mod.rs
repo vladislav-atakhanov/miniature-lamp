@@ -8,9 +8,8 @@ mod layer;
 mod preprocess;
 mod template;
 mod unwrap;
+pub use action::Action;
 pub use layer::Layer;
-
-use action::Action;
 pub use layer::Override;
 use preprocess::preprocess;
 
@@ -25,44 +24,60 @@ impl Layout {
     }
     fn prepare_layers(&mut self, aliases: &HashMap<String, Action>) {
         let layer_names: Vec<String> = self.layers.keys().cloned().collect();
+
         for name in &layer_names {
             let layer = self.layers.get(name).unwrap();
-            let parent_name = layer.parent.clone();
-
-            let updates: Vec<(KeyIndex, Action)> = layer
+            let updates: Vec<_> = layer
                 .keys
                 .iter()
-                .filter_map(|(key, action)| match action {
-                    Action::Transparent => {
-                        let mut current_parent = parent_name.clone();
-                        loop {
-                            let parent_layer = self.layers.get(&current_parent)?;
-                            match parent_layer.keys.get(key) {
-                                Some(a) if !matches!(a, Action::Transparent) => {
-                                    break Some((*key, a.clone()));
-                                }
-                                _ => {
-                                    current_parent = parent_layer.parent.clone();
-                                }
-                            }
-                        }
+                .filter_map(|(&key, action)| {
+                    if let Action::Alias(alias) = action {
+                        aliases.get(alias).cloned().map(|a| (key, a))
+                    } else {
+                        None
                     }
-                    Action::Alias(alias) => {
-                        if let Some(a) = aliases.get(alias) {
-                            Some((*key, a.clone()))
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
                 })
                 .collect();
 
-            let layer = self.layers.get_mut(name).unwrap();
-            for (key, action) in updates {
-                layer.keys.insert(key, action);
+            if let Some(layer) = self.layers.get_mut(name) {
+                for (key, action) in updates {
+                    layer.keys.insert(key, action);
+                }
             }
         }
+
+        for name in &layer_names {
+            let layer = self.layers.get(name).unwrap();
+            let parent_name = layer.parent.clone();
+            let updates: Vec<_> = layer
+                .keys
+                .iter()
+                .filter_map(|(&key, action)| {
+                    if !matches!(action, Action::Transparent) {
+                        return None;
+                    }
+
+                    let mut current = parent_name.as_str();
+
+                    loop {
+                        let parent = self.layers.get(current)?;
+                        match parent.keys.get(&key) {
+                            Some(a) if !matches!(a, Action::Transparent) => {
+                                break Some((key, a.clone()));
+                            }
+                            _ => current = &parent.parent,
+                        }
+                    }
+                })
+                .collect();
+
+            if let Some(layer) = self.layers.get_mut(name) {
+                for (key, action) in updates {
+                    layer.keys.insert(key, action);
+                }
+            }
+        }
+        self.layers.remove("src");
     }
     fn layer_from(&self, parent: String, name: String) -> Result<Layer, String> {
         let Some(parent) = self
