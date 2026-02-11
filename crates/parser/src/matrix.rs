@@ -1,5 +1,5 @@
 use keys::keys::Key;
-use s_expression::{Expr, Expr::*};
+use s_expression::Expr;
 
 #[rustfmt::skip]
 #[derive(Debug)]
@@ -12,35 +12,41 @@ struct Item {
 #[derive(Debug, Default)]
 pub struct Matrix(Vec<Item>);
 
-fn parse_item(row: &[&str]) -> Option<Item> {
+fn parse_item(row: &[&str]) -> Result<Item, String> {
     match row.len() {
         5 => {
-            let [key, x, y, w, h] = <[&str; 5]>::try_from(row).ok()?;
-            Some(Item {
-                key: key.parse().ok()?,
-                x: x.parse().ok()?,
-                y: y.parse().ok()?,
-                w: w.parse().ok()?,
-                h: h.parse().ok()?,
+            let [key, x, y, w, h] =
+                <[&str; 5]>::try_from(row).map_err(|_| "Unpack error".to_string())?;
+            Ok(Item {
+                key: key.parse().map_err(|_| format!("Unknown key {}", key))?,
+                x: x.parse().map_err(|_| "parse float".to_string())?,
+                y: y.parse().map_err(|_| "parse float".to_string())?,
+                w: w.parse().map_err(|_| "parse float".to_string())?,
+                h: h.parse().map_err(|_| "parse float".to_string())?,
                 r: 0.0,
                 rx: 0.0,
                 ry: 0.0,
             })
         }
         8 => {
-            let [key, x, y, w, h, r, rx, ry] = <[&str; 8]>::try_from(row).ok()?;
-            Some(Item {
-                key: key.parse().ok()?,
-                x: x.parse().ok()?,
-                y: y.parse().ok()?,
-                w: w.parse().ok()?,
-                h: h.parse().ok()?,
-                r: r.parse().ok()?,
-                rx: rx.parse().ok()?,
-                ry: ry.parse().ok()?,
+            let [key, x, y, w, h, r, rx, ry] =
+                <[&str; 8]>::try_from(row).map_err(|_| "Unpack error".to_string())?;
+            Ok(Item {
+                key: key.parse().map_err(|_| format!("Unknown key {}", key))?,
+                x: x.parse().map_err(|_| "parse float".to_string())?,
+                y: y.parse().map_err(|_| "parse float".to_string())?,
+                w: w.parse().map_err(|_| "parse float".to_string())?,
+                h: h.parse().map_err(|_| "parse float".to_string())?,
+                r: r.parse().map_err(|_| "parse float".to_string())?,
+                rx: rx.parse().map_err(|_| "parse float".to_string())?,
+                ry: ry.parse().map_err(|_| "parse float".to_string())?,
             })
         }
-        _ => None,
+        _ => Err(format!(
+            "Cannot parse {:?} items (length {})",
+            row,
+            row.len()
+        )),
     }
 }
 
@@ -49,12 +55,8 @@ pub fn parse<'a>(items: &[Expr<'a>]) -> Result<Matrix, String> {
     items.iter().try_for_each(|x| {
         let row = x.list()?.iter().filter_map(|el| el.atom().ok());
         let row: Vec<&str> = row.collect();
-        if let Some(m) = parse_item(row.as_slice()) {
-            matrix.push(m);
-            Ok(())
-        } else {
-            Err(format!("Cannot parse {:?} items", row))
-        }
+        matrix.push(parse_item(row.as_slice())?);
+        Ok::<(), String>(())
     })?;
     Ok(Matrix(matrix))
 }

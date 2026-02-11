@@ -10,19 +10,19 @@ impl Default for Expr<'static> {
 }
 
 impl<'a> Expr<'a> {
-    pub fn list(&'a self) -> Result<&'a Vec<Expr<'a>>, String> {
+    pub fn list(&self) -> Result<&Vec<Expr<'a>>, String> {
         match self {
             Expr::List(list) => Ok(list),
             _ => return Err(format!("Expected list, found {:?}", self)),
         }
     }
-    pub fn atom(&'a self) -> Result<&'a str, String> {
+    pub fn atom(&self) -> Result<&'a str, String> {
         match self {
             Expr::Atom(s) => Ok(*s),
             _ => return Err(format!("Expected atom, found {:?}", self)),
         }
     }
-    pub fn to_string(&'a self) -> String {
+    pub fn to_string(&self) -> String {
         format!("{}", self)
     }
 }

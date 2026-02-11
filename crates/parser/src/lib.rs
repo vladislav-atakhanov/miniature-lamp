@@ -1,11 +1,15 @@
+use std::collections::HashMap;
+
+use keys::keys::{Key, KeyIndex};
+
 mod matrix;
 mod vial;
-use s_expression::Expr::*;
 
 #[derive(Debug, Default)]
 pub struct Keyboard<'a> {
     pub matrix: matrix::Matrix,
     pub vial: vial::Vial,
+    pub source: HashMap<Key, KeyIndex>,
     pub meta: &'a str,
 }
 
@@ -21,13 +25,7 @@ pub fn parse<'a>(content: &'a str) -> Result<Keyboard<'a>, String> {
     keyboard.meta = meta;
     value.list()?.iter().try_for_each(|i| {
         let lst = i.list()?;
-        let fun = lst
-            .first()
-            .map_or(None, |f| match f {
-                Atom(f) => Some(*f),
-                _ => None,
-            })
-            .ok_or("Expected atom".to_string())?;
+        let fun = lst.first().ok_or("Expected name")?.atom()?;
         match fun {
             "matrix" => {
                 keyboard.matrix = matrix::parse(&lst[1..])?;
@@ -36,6 +34,24 @@ pub fn parse<'a>(content: &'a str) -> Result<Keyboard<'a>, String> {
             "vial" => {
                 keyboard.vial = vial::parse(&lst[1..])?;
                 Ok(())
+            }
+            "source" => {
+                keyboard.source = HashMap::with_capacity(lst.len() - 1);
+                lst.iter().skip(1).enumerate().try_for_each(|(i, expr)| {
+                    let key: Key = expr
+                        .atom()?
+                        .parse()
+                        .map_err(|_| format!("Unknown key {}", expr))?;
+                    if keyboard
+                        .source
+                        .insert(key, i.try_into().map_err(|_| format!("Parse error"))?)
+                        .is_some()
+                    {
+                        Err(format!("Key {:?} duplicate", key))
+                    } else {
+                        Ok(())
+                    }
+                })
             }
             _ => Err(format!("Unexpected {}", fun)),
         }

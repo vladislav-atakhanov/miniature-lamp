@@ -3,13 +3,47 @@ use std::str::FromStr;
 #[rustfmt::skip]
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum Key {
-    Fn(u8),    F13,      F14,     F15,   F16, F17, F18, F19, F20,   F21, F22,       F23,         F24,
-    Esc,       F1,       F2,      F3,    F4,  F5,  F6,  F7,  F8,    F9,  F10,       F11,         F12,                   Print,  ScrollLock, Pause,
-    Grave,     N1,       N2,      N3,    N4,  N5,  N6,  N7,  N8,    N9,  N0,        Minus,       Equal,        Backspace, Insert, Home,       PageUp,   Numlock, KpSlash, KpAsterisk, KpMinus,
-    Tab,       Q,        W,       E,     R,   T,   Y,   U,   I,     O,   P,         LeftBracket, RightBracket, Backslash, Delete, End,        PageDown, Kp7,     Kp8,     Kp9,        KpPlus,
-    CapsLock,  A,        S,       D,     F,   G,   H,   J,   K,     L,   Semicolon, Apostrophe,                    Enter,                               Kp4,     Kp5,     Kp6,
-    LeftShift, Z,        X,       C,     V,   B,   N,   M,   Comma, Dot, Slash,                               RightShift,         Up,                   Kp1,     Kp2,     Kp3,        KpEnter,
-    LeftCtrl,  LeftMeta, LeftAlt, Space,                                 RightAlt,  RightMeta,   Menu,         RightCtrl, Left,   Down,       Right,    Kp0,              KpDot,
+    Fn(u8),    F13,      F14,     F15,   F16,  F17,  F18, F19,    F20,   F21,  F22,       F23,         F24,                     VolumeUp, VolumeDown, VolumeMute,
+    Esc,       F1,       F2,      F3,    F4,   F5,   F6,  F7,     F8,    F9,   F10,       F11,         F12,                     Print,  ScrollLock, Pause,
+    Grave,     One,      Two,     Three, Four, Five, Six, Seven,  Eight, Nine, Zero,      Minus,       Equal,        Backspace, Insert, Home,       PageUp,   Numlock, KpSlash, KpAsterisk, KpMinus,
+    Tab,       Q,        W,       E,     R,    T,    Y,   U,      I,     O,    P,         LeftBracket, RightBracket, Backslash, Delete, End,        PageDown, Kp7,     Kp8,     Kp9,        KpPlus,
+    CapsLock,  A,        S,       D,     F,    G,    H,   J,      K,     L,    Semicolon, Apostrophe,                    Enter,                               Kp4,     Kp5,     Kp6,
+    LeftShift, Z,        X,       C,     V,    B,    N,   M,      Comma, Dot,  Slash,                               RightShift,         Up,                   Kp1,     Kp2,     Kp3,        KpEqual,
+    LeftCtrl,  LeftMeta, LeftAlt, Space,                                       RightAlt,  RightMeta,   Menu,         RightCtrl, Left,   Down,       Right,    Kp0,              KpDot,      KpEnter,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct KeyIndex(u8);
+
+impl TryFrom<usize> for KeyIndex {
+    type Error = ();
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Ok(Self(value.try_into().map_err(|_| ())?))
+    }
+}
+impl TryInto<usize> for &KeyIndex {
+    type Error = ();
+    fn try_into(self) -> Result<usize, Self::Error> {
+        Ok(self.0 as usize)
+    }
+}
+
+impl Key {
+    pub fn from_digit(c: char) -> Self {
+        match c {
+            '0' => Key::Kp0,
+            '1' => Key::Kp1,
+            '2' => Key::Kp2,
+            '3' => Key::Kp3,
+            '4' => Key::Kp4,
+            '5' => Key::Kp5,
+            '6' => Key::Kp6,
+            '7' => Key::Kp7,
+            '8' => Key::Kp8,
+            '9' => Key::Kp9,
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl FromStr for Key {
@@ -20,10 +54,6 @@ impl FromStr for Key {
             return Ok(Self::Fn(num));
         }
         if let Some(d) = s.strip_prefix("KeyFn") {
-            let num: u8 = d.parse().map_err(|_| ())?;
-            return Ok(Self::Fn(num));
-        }
-        if let Some(d) = s.strip_prefix("KeyF") {
             let num: u8 = d.parse().map_err(|_| ())?;
             return Ok(Self::Fn(num));
         }
@@ -58,16 +88,16 @@ impl FromStr for Key {
             "Pause" => Self::Pause,
 
             "Backquote" | "`" => Self::Grave,
-            "Digit1" | "1" => Self::N1,
-            "Digit2" | "2" => Self::N2,
-            "Digit3" | "3" => Self::N3,
-            "Digit4" | "4" => Self::N4,
-            "Digit5" | "5" => Self::N5,
-            "Digit6" | "6" => Self::N6,
-            "Digit7" | "7" => Self::N7,
-            "Digit8" | "8" => Self::N8,
-            "Digit9" | "9" => Self::N9,
-            "Digit0" | "0" => Self::N0,
+            "Digit1" | "1" => Self::One,
+            "Digit2" | "2" => Self::Two,
+            "Digit3" | "3" => Self::Three,
+            "Digit4" | "4" => Self::Four,
+            "Digit5" | "5" => Self::Five,
+            "Digit6" | "6" => Self::Six,
+            "Digit7" | "7" => Self::Seven,
+            "Digit8" | "8" => Self::Eight,
+            "Digit9" | "9" => Self::Nine,
+            "Digit0" | "0" => Self::Zero,
             "Minus" | "-" => Self::Minus,
             "Equal" | "=" => Self::Equal,
             "Backspace" | "bks" => Self::Backspace,
@@ -108,7 +138,6 @@ impl FromStr for Key {
             "Quote" | "'" => Self::Apostrophe,
             "Enter" | "ent" | "enter" => Self::Enter,
 
-            "LeftShift" | "sft" | "lsft" => Self::LeftShift,
             "KeyZ" | "z" => Self::Z,
             "KeyX" | "x" => Self::X,
             "KeyC" | "c" => Self::C,
@@ -119,7 +148,6 @@ impl FromStr for Key {
             "Comma" | "," => Self::Comma,
             "Period" | "." => Self::Dot,
             "Slash" | "/" => Self::Slash,
-            "RightShift" | "rsft" => Self::RightShift,
 
             "Numpad0" | "kp0" => Self::Kp0,
             "Numpad1" | "kp1" => Self::Kp1,
@@ -138,19 +166,29 @@ impl FromStr for Key {
             "NumpadAsterisk" | "kp*" => Self::KpAsterisk,
             "NumpadMinus" | "kp-" => Self::KpMinus,
 
-            "LeftCtrl" | "lctl" | "ctl" => Self::LeftCtrl,
-            "LeftMeta" | "lmeta" | "meta" => Self::LeftMeta,
-            "LeftAlt" | "lalt" | "alt" => Self::LeftAlt,
+            "LeftShift" | "sft" | "lsft" | "LS" | "S" => Self::LeftShift,
+            "RightShift" | "rsft" | "RS" => Self::RightShift,
+
+            "LeftCtrl" | "lctl" | "ctl" | "LC" | "C" => Self::LeftCtrl,
+            "RightCtrl" | "rctl" | "RC" => Self::RightCtrl,
+
+            "LeftMeta" | "lmeta" | "meta" | "LM" | "M" => Self::LeftMeta,
+            "RightMeta" | "rmeta" | "RM" => Self::RightMeta,
+
+            "LeftAlt" | "lalt" | "alt" | "LA" | "A" => Self::LeftAlt,
+            "RightAlt" | "ralt" | "RA" => Self::RightAlt,
+
             "Space" | "spc" => Self::Space,
-            "RightAlt" | "ralt" => Self::RightAlt,
-            "RightMeta" | "rmeta" => Self::RightMeta,
             "Menu" | "menu" => Self::Menu,
-            "RightCtrl" | "rctl" => Self::RightCtrl,
 
             "ArrowLeft" | "lt" => Self::Left,
             "ArrowDown" | "dn" => Self::Down,
             "ArrowUp" | "up" => Self::Up,
             "ArrowRight" | "rt" => Self::Right,
+
+            "VolumeUp" | "volu" | "vol+" => Self::VolumeUp,
+            "VolumeDown" | "vold" | "vol-" => Self::VolumeDown,
+            "VolumeMute" | "mute" => Self::VolumeMute,
             _ => return Err(()),
         })
     }
