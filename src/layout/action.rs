@@ -7,7 +7,7 @@ pub enum Action {
     Release(Key),
     Hold(Key),
     Transparent,
-    Nil,
+    NoAction,
     Alias(String),
     MouseWheelUp,
     MouseWheelDown,
@@ -80,7 +80,7 @@ impl Action {
                     )
                 } else {
                     match *e {
-                        "X" => Action::Nil,
+                        "X" => Action::NoAction,
                         "_" => Action::Transparent,
                         "lb" => Self::unicode('(')?,
                         "rb" => Self::unicode(')')?,
