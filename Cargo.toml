@@ -9,3 +9,7 @@ keys = { path = "crates/keys" }
 s-expression = { path = "crates/s-expression" }
 log = "0.4.29"
 env_logger = "0.11.8"
+vitaly = { path = "crates/vitaly" }
+hidapi = "2.6.4"
+serde = "1.0.228"
+serde_json = "1.0.149"

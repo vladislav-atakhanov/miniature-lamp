@@ -3,13 +3,10 @@ use s_expression::{Expr, Expr::*};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-enum Type {
-    Key,
-    Encoder,
+pub enum Item {
+    KeyCode(u8, u8),
+    Encoder(u8, u8),
 }
-
-#[derive(Debug)]
-struct Item(u8, u8, Type);
 
 #[derive(Debug, Default)]
 pub struct Vial(HashMap<KeyIndex, Item>);
@@ -17,6 +14,13 @@ pub struct Vial(HashMap<KeyIndex, Item>);
 impl Vial {
     fn add(&mut self, item: Item) -> Option<Item> {
         self.0.insert(self.0.len().try_into().ok()?, item)
+    }
+    pub fn ok_or<E>(&self, e: E) -> Result<&HashMap<KeyIndex, Item>, E> {
+        if self.0.len() > 0 {
+            Ok(&self.0)
+        } else {
+            Err(e)
+        }
     }
 }
 
@@ -36,11 +40,11 @@ pub fn parse<'a>(items: &[Expr<'a>]) -> Result<Vial, String> {
             [a, b] | [a, b, _] => {
                 let a = a.parse().map_err(|_| format!("Unknown value {}", a))?;
                 let b = b.parse().map_err(|_| format!("Unknown value {}", b))?;
-                let t = match row.get(3) {
-                    Some(&"e") => Type::Encoder,
-                    _ => Type::Key,
-                };
-                Some(Item(a, b, t))
+
+                Some(match row.get(2) {
+                    Some(&"e") => Item::Encoder(a, b),
+                    _ => Item::KeyCode(a, b),
+                })
             }
             _ => None,
         };

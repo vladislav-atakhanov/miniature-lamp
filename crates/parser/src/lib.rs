@@ -5,7 +5,7 @@ use keys::keys::{Key, KeyIndex};
 mod matrix;
 mod vial;
 
-pub use vial::Vial;
+pub use vial::{Item as VialItem, Vial};
 
 #[derive(Debug, Default)]
 pub struct Keyboard {

@@ -10,6 +10,17 @@ pub enum Key {
     CapsLock,  A,        S,       D,     F,    G,    H,   J,      K,     L,    Semicolon, Apostrophe,                    Enter,                               Kp4,     Kp5,     Kp6,
     LeftShift, Z,        X,       C,     V,    B,    N,   M,      Comma, Dot,  Slash,                               RightShift,         Up,                   Kp1,     Kp2,     Kp3,        KpEqual,
     LeftCtrl,  LeftMeta, LeftAlt, Space,                                       RightAlt,  RightMeta,   Menu,         RightCtrl, Left,   Down,       Right,    Kp0,              KpDot,      KpEnter,
+
+    // Media
+    MediaPlayPause,
+
+
+
+    // Mouse
+    MouseCursorUp, MouseCursorDown, MouseCursorLeft, MouseCursorRight,
+    MouseWheelUp, MouseWheelDown, MouseWheelLeft, MouseWheelRight,
+    MouseButton1, MouseButton2, MouseButton3, MouseButton4, MouseButton5,
+    MouseAcceleration0, MouseAcceleration1, MouseAcceleration2,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
@@ -202,6 +213,25 @@ impl FromStr for Key {
             "VolumeUp" | "volu" | "vol+" => Self::VolumeUp,
             "VolumeDown" | "vold" | "vol-" => Self::VolumeDown,
             "VolumeMute" | "mute" => Self::VolumeMute,
+            "MediaPlayPause" => Self::MediaPlayPause,
+
+            "MouseCursorUp" | "mcup" => Self::MouseCursorUp,
+            "MouseCursorDown" | "mcdn" => Self::MouseCursorDown,
+            "MouseCursorLeft" | "mclt" => Self::MouseCursorLeft,
+            "MouseCursorRight" | "mcrt" => Self::MouseCursorRight,
+            "MouseWheelUp" | "mwup" => Self::MouseWheelUp,
+            "MouseWheelDown" | "mwdn" => Self::MouseWheelDown,
+            "MouseWheelLeft" | "mwlt" => Self::MouseWheelLeft,
+            "MouseWheelRight" | "mwrt" => Self::MouseWheelRight,
+            "MouseButton1" | "m1" => Self::MouseButton1,
+            "MouseButton2" | "m2" => Self::MouseButton2,
+            "MouseButton3" | "m3" => Self::MouseButton3,
+            "MouseButton4" | "m4" => Self::MouseButton4,
+            "MouseButton5" | "m5" => Self::MouseButton5,
+            "MouseAcceleration0" => Self::MouseAcceleration0,
+            "MouseAcceleration1" => Self::MouseAcceleration1,
+            "MouseAcceleration2" => Self::MouseAcceleration2,
+
             _ => return Err(()),
         })
     }

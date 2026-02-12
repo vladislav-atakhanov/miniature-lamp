@@ -66,7 +66,7 @@ impl Layout {
         self.layers.remove("src");
         Ok(())
     }
-    fn layer_from(&self, parent: String, name: String) -> Result<Layer, String> {
+    fn layer_from(&self, parent: String, name: String, i: usize) -> Result<Layer, String> {
         let Some(parent) = self
             .layers
             .get(&name)
@@ -78,7 +78,7 @@ impl Layout {
         if parent.name == name {
             Ok(parent.clone())
         } else {
-            Ok(parent.child(name))
+            Ok(parent.child(name, i))
         }
     }
 }
@@ -94,7 +94,8 @@ impl FromStr for Layout {
         let mut aliases: HashMap<String, Action> = HashMap::new();
         root.list()?
             .iter()
-            .try_for_each(|r| -> Result<(), String> {
+            .enumerate()
+            .try_for_each(|(i, r)| -> Result<(), String> {
                 let [name, params @ ..] = r.list()?.as_slice() else {
                     return Err("Exprected name".to_string());
                 };
@@ -110,7 +111,7 @@ impl FromStr for Layout {
                         layout.layers.insert(src.name.to_string(), src);
                     }
                     "deflayer" => {
-                        let layer = Layer::from_def(params)?;
+                        let layer = Layer::from_def(params, i)?;
                         let keys = &layout.keyboard.source;
                         if layer.keys.len() != keys.len() {
                             return Err(format!(
@@ -124,7 +125,7 @@ impl FromStr for Layout {
                     }
                     "deflayermap" => {
                         let layer = Layer::from_map(params, &layout.keyboard.source)?;
-                        let mut l = layout.layer_from(layer.parent, layer.name)?;
+                        let mut l = layout.layer_from(layer.parent, layer.name, i)?;
                         l.keys.extend(layer.keys);
                         layout.layers.insert(l.name.to_string(), l);
                     }
@@ -144,7 +145,8 @@ impl FromStr for Layout {
                     }
                     "defoverride" => {
                         let (name, parent, params) = Layer::get_name(params)?;
-                        let mut layer = layout.layer_from(parent.to_string(), name.to_string())?;
+                        let mut layer =
+                            layout.layer_from(parent.to_string(), name.to_string(), i)?;
                         layer.overrides = params
                             .chunks(2)
                             .map(|x| {

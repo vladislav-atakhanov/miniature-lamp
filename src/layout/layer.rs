@@ -21,15 +21,17 @@ pub struct Layer {
     pub parent: String,
     pub keys: HashMap<KeyIndex, Action>,
     pub overrides: Vec<Override>,
+    pub index: usize,
 }
 
 impl Layer {
-    pub fn child(&self, name: String) -> Self {
+    pub fn child(&self, name: String, index: usize) -> Self {
         Self {
             name: name,
             parent: self.name.clone(),
             keys: self.keys.clone(),
             overrides: self.overrides.clone(),
+            index: index,
         }
     }
     pub fn from_keyboard(source: &HashMap<Key, KeyIndex>) -> Self {
@@ -41,9 +43,10 @@ impl Layer {
                 .map(|(k, v)| (*v, Action::Tap(k.clone())))
                 .collect(),
             overrides: Default::default(),
+            index: 0,
         }
     }
-    pub fn from_def(params: &[Expr<'_>]) -> Result<Self, String> {
+    pub fn from_def(params: &[Expr<'_>], index: usize) -> Result<Self, String> {
         let (name, parent, actions) = Self::get_name(params)?;
         Ok(Self {
             name: name.to_string(),
@@ -59,6 +62,7 @@ impl Layer {
                 },
             )?,
             overrides: Default::default(),
+            index: index,
         })
     }
 
@@ -115,6 +119,7 @@ impl Layer {
                 },
             )?,
             overrides: Default::default(),
+            index: 0,
         })
     }
 }
