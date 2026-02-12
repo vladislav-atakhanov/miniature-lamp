@@ -14,6 +14,27 @@ pub struct Override {
     pub mods: Vec<Key>,
     pub action: Action,
 }
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Keymap {
+    En,
+    Ru,
+}
+
+impl Default for Keymap {
+    fn default() -> Self {
+        Keymap::En
+    }
+}
+impl FromStr for Keymap {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "ru" => Self::Ru,
+            "en" => Self::En,
+            _ => return Err(()),
+        })
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct Layer {
@@ -22,6 +43,7 @@ pub struct Layer {
     pub keys: HashMap<KeyIndex, Action>,
     pub overrides: Vec<Override>,
     pub index: usize,
+    pub keymap: Keymap,
 }
 
 impl Layer {
@@ -32,6 +54,7 @@ impl Layer {
             keys: self.keys.clone(),
             overrides: self.overrides.clone(),
             index: index,
+            keymap: self.keymap.clone(),
         }
     }
     pub fn from_keyboard(source: &HashMap<Key, KeyIndex>) -> Self {
@@ -44,6 +67,7 @@ impl Layer {
                 .collect(),
             overrides: Default::default(),
             index: 0,
+            keymap: Default::default(),
         }
     }
     pub fn from_def(params: &[Expr<'_>], index: usize) -> Result<Self, String> {
@@ -62,8 +86,22 @@ impl Layer {
                 },
             )?,
             overrides: Default::default(),
+            keymap: Default::default(),
             index: index,
         })
+    }
+
+    pub fn get_dependencies(&self) -> Vec<&str> {
+        let mut layers: Vec<_> = self
+            .keys
+            .iter()
+            .filter_map(|(_, k)| match k {
+                Action::LayerWhileHeld(x) if *x != self.name => Some(x.as_str()),
+                _ => None,
+            })
+            .collect();
+        layers.dedup();
+        layers
     }
 
     pub fn get_name<'a>(
@@ -119,6 +157,7 @@ impl Layer {
                 },
             )?,
             overrides: Default::default(),
+            keymap: Default::default(),
             index: 0,
         })
     }

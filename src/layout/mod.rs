@@ -7,16 +7,18 @@ mod action;
 mod layer;
 mod preprocess;
 mod template;
+mod unicode;
 mod unwrap;
 pub use action::Action;
-pub use layer::Layer;
-pub use layer::Override;
+pub use layer::{Keymap, Layer, Override};
 use preprocess::preprocess;
+use unicode::unicode;
 
 #[derive(Debug, Default)]
 pub struct Layout {
     pub layers: HashMap<String, Layer>,
     pub keyboard: Keyboard,
+    pub keymaps: HashMap<Keymap, Action>,
 }
 impl Layout {
     fn new() -> Self {
@@ -64,6 +66,58 @@ impl Layout {
             }
         }
         self.layers.remove("src");
+        let new_layers: Vec<Layer> = self
+            .layers
+            .iter()
+            .flat_map(|(_, l)| {
+                let deps = l.get_dependencies();
+                deps.iter()
+                    .filter_map(|name| {
+                        let dep = self.layers.get(*name)?;
+                        if dep.keymap == l.keymap {
+                            return None;
+                        }
+                        if dep.keys.iter().all(|(_, v)| match l.keymap {
+                            Keymap::En => false,
+                            Keymap::Ru => !matches!(v, Action::Unicode(_)),
+                        }) {
+                            return None;
+                        }
+                        let mut new = dep.clone();
+                        new.keymap = l.keymap.clone();
+                        new.name = format!("{}-{:?}", dep.name, l.keymap).to_lowercase();
+                        new.index += 1;
+                        Some(new)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        new_layers.into_iter().for_each(|l| {
+            self.layers.insert(l.name.to_string(), l);
+        });
+
+        let en = self
+            .keymaps
+            .get(&Keymap::En)
+            .ok_or("Hotkey to switch En keymap not found".to_string())?;
+        self.layers.values_mut().try_for_each(|layer| {
+            let current = self.keymaps.get(&layer.keymap).ok_or(format!(
+                "Hotkey to switch {:?} keymap not found",
+                layer.keymap
+            ))?;
+            for action in layer.keys.values_mut() {
+                let Action::Unicode(ch) = action else {
+                    continue;
+                };
+                print!("{:?}: {:?} => ", layer.keymap, ch);
+                let a = unicode(ch, &layer.keymap, en, current)?;
+                println!("{:?}", a);
+                *action = a;
+            }
+            Ok::<_, String>(())
+        })?;
+
         Ok(())
     }
     fn layer_from(&self, parent: String, name: String, i: usize) -> Result<Layer, String> {
@@ -142,6 +196,28 @@ impl FromStr for Layout {
                                 })
                                 .collect::<Result<Vec<_>, _>>()?,
                         );
+                    }
+                    "defkeymap" => {
+                        params.chunks(3).try_for_each(|x| {
+                            let [Atom(layer), Atom(keymap), act] = x else {
+                                return Err(format!("Syntax error: {:?}", x));
+                            };
+                            let layer = layout
+                                .layers
+                                .get_mut(*layer)
+                                .ok_or(format!("Layer {:?} not found", layer))?;
+
+                            let keymap: Keymap = keymap
+                                .parse()
+                                .map_err(|_| format!("Unknown keymap {:?}", keymap))?;
+
+                            let action = Action::from_expr(act)?;
+
+                            layout.keymaps.insert(keymap.clone(), action);
+                            layer.keymap = keymap.clone();
+
+                            Ok(())
+                        })?;
                     }
                     "defoverride" => {
                         let (name, parent, params) = Layer::get_name(params)?;

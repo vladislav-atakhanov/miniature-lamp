@@ -1,0 +1,40 @@
+(defunicode en
+    ! S-1
+    @ S-2
+    # S-3
+    $ S-4
+    % S-5
+    ^ S-6
+    & S-7
+    * S-8
+    lb S-9
+    rb S-0
+    _ S-Minus
+    + S-=
+
+    { S-[
+    } S-]
+    " S-'
+    : S-;
+    < S-,
+    > S-.
+    ? S-/
+    ~ S-`
+    | S-\
+)
+(defunicode ru
+    ! S-1
+    " S-2
+    № S-3
+    ; S-4
+    % S-5
+    : S-6
+    ? S-7
+    * S-8
+    rb S-9
+    lb S-0
+    _ S-Minus
+    + S-=
+
+    / S-\
+)

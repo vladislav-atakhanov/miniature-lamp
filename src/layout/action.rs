@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use keys::keys::Key;
-use log::warn;
 use s_expression::Expr::{self, *};
 
 #[derive(Debug, Clone)]
@@ -15,13 +14,15 @@ pub enum Action {
     LayerWhileHeld(String),
     LayerSwitch(String),
     Unicode(char),
+    Sequence(Vec<Action>),
+    Hold(Key),
+    Release(Key),
 }
 
 impl Action {
-    // pub fn unicode(ch: char) -> Result<Self, String> {
-    //     Ok()
-    // }
-
+    pub fn taps(keys: Vec<Key>) -> Self {
+        Self::Multi(keys.iter().map(|k| Action::Tap(k.clone())).collect())
+    }
     pub fn resolve_aliases(&self, aliases: &HashMap<String, Action>) -> Result<Action, String> {
         let res = match self {
             Action::Alias(name) => aliases

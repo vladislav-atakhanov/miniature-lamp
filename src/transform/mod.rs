@@ -25,21 +25,6 @@ pub fn load_meta(dev: &HidDevice) -> Result<Value, String> {
     Ok(meta_data)
 }
 
-impl Layer {
-    fn get_dependencies(&self) -> Vec<&str> {
-        let mut layers: Vec<_> = self
-            .keys
-            .iter()
-            .filter_map(|(_, k)| match k {
-                Action::LayerWhileHeld(x) if *x != self.name => Some(x.as_str()),
-                _ => None,
-            })
-            .collect();
-        layers.dedup();
-        layers
-    }
-}
-
 fn unlock_device(dev: &HidDevice, meta: &Value, unlock: bool) -> Result<(), String> {
     let mut status = protocol::get_locked_status(&dev).map_err(|e| e.to_string())?;
     if status.locked && unlock {
@@ -166,6 +151,7 @@ impl Layout {
                 .collect(),
         )?;
         order.reverse();
+        println!("{:?}", order);
         Ok(order
             .into_iter()
             .map(|n| self.layers.get(n).unwrap())
@@ -435,43 +421,6 @@ impl VialAction {
         let s = match action {
             Action::NoAction => "KC_NO".to_string(),
             Action::Tap(k) => key_to_string(k).to_string(),
-            Action::Unicode(ch) => match ch {
-                '+' => key_to_string(&Key::KpPlus).to_string(),
-                '-' => key_to_string(&Key::KpMinus).to_string(),
-                '*' => key_to_string(&Key::KpAsterisk).to_string(),
-                '/' => key_to_string(&Key::KpSlash).to_string(),
-                '0'..='9' => key_to_string(&Key::from_digit(*ch)).to_string(),
-
-                x if x.is_ascii() && !x.is_control() => {
-                    let digits: Vec<_> = (*x as u8)
-                        .to_string()
-                        .chars()
-                        .map(|c| {
-                            Ok(match c {
-                                '0'..='9' => MacroAction::Tap(Self::keycode(
-                                    format!("KC_KP_{}", c),
-                                    version,
-                                )?),
-                                _ => return Err(format!("Expected digit, found {:?}", c)),
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-
-                    let lalt = Self::keycode(key_to_string(&Key::LeftAlt).to_string(), version)?;
-                    let mut res = Vec::with_capacity(digits.len() * 2 + 2);
-                    res.push(MacroAction::Down(lalt.clone()));
-
-                    digits.into_iter().for_each(|d| {
-                        res.push(d);
-                        res.push(MacroAction::Delay(1));
-                    });
-                    res.push(MacroAction::Up(lalt.clone()));
-                    return Ok(Self::Macro(Macro(res)));
-                }
-                _ => {
-                    return Err(format!("Non-ASCII character {:?} ({})", ch, *ch as u32));
-                }
-            },
             Action::TapHold(tap, hold) => {
                 if let Action::Tap(tap) = tap.as_ref() {
                     match hold.as_ref() {
@@ -517,7 +466,7 @@ impl VialAction {
                 let hold = Self::from_action(hold, layer_by_name, version)?;
                 return Ok(Self::tap_hold(tap, hold));
             }
-            Action::Alias(_) => {
+            Action::Alias(_) | Action::Unicode(_) => {
                 return Err(format!("Action {:?} not implemented", action));
             }
             Action::LayerSwitch(x) => {
@@ -565,8 +514,30 @@ impl VialAction {
                 return Ok(Self::Macro(Macro(actions)));
             }
             Action::Transparent => "KC_TRANSPARENT".to_string(),
+            Action::Sequence(actions) => {
+                return Ok(Self::Macro(Macro(
+                    actions
+                        .iter()
+                        .map(|a| match a {
+                            Action::Hold(key) => {
+                                Self::keycode(key_to_string(key).to_string(), version)
+                                    .map(|a| MacroAction::Down(a))
+                            }
+                            Action::Release(key) => {
+                                Self::keycode(key_to_string(key).to_string(), version)
+                                    .map(|a| MacroAction::Up(a))
+                            }
+                            a => Self::from_action(a, layer_by_name, version)
+                                .map(|a| MacroAction::Tap(a)),
+                        })
+                        .collect::<Result<_, _>>()?,
+                )));
+            }
+            Action::Hold(_) | Action::Release(_) => {
+                return Err(format!("Action {:?} not in sequence", action));
+            }
         };
-        Self::keycode(s.to_string(), version)
+        Self::keycode(s, version)
     }
 }
 
