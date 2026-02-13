@@ -73,9 +73,8 @@ pub fn unlock_device(dev: &HidDevice, meta: &Value, unlock: bool) -> Result<(), 
         while !unlocked {
             std::thread::sleep(sleep_duration);
             (unlocked, polls_remaining) = protocol::unlock_poll(&dev).map_err(|e| e.to_string())?;
-            print!("\r");
             print!(
-                "Seconds remaining: {} keep pushing...",
+                "Seconds remaining: {:.1} keep pushing...\r",
                 (polls_remaining as f64) / 10.0
             );
             std::io::stdout().flush().map_err(|e| e.to_string())?;

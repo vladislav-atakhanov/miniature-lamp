@@ -1,12 +1,7 @@
 use crate::layout::action::Action;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::format,
-    str::FromStr,
-};
-
 use keys::keys::{Key, KeyIndex};
 use s_expression::Expr::{self, *};
+use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug, Clone)]
 pub struct Override {

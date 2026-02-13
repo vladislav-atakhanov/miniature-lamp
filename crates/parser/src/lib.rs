@@ -35,7 +35,12 @@ pub fn parse_keymap(lst: &Vec<Expr>) -> Result<HashMap<Key, KeyIndex>, String> {
         })
 }
 
-pub fn parse(content: &str) -> Result<Keyboard, String> {
+pub fn parse(keyboard: &str) -> Result<Keyboard, String> {
+    let content = match keyboard {
+        "imperial44" => include_str!("keyboards/imperial44.txt"),
+        _ => return Err(format!("Keyboard {:?} not found", keyboard)),
+    };
+
     let (raw, meta) = if let Some((before, after)) = content.split_once("---") {
         (after.trim(), before.trim())
     } else {

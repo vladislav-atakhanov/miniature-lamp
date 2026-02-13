@@ -10,17 +10,10 @@ use super::graph::{Node, priority_topo_sort};
 use crate::layout::{Action, Layer, Layout};
 use actions::{Macro, MacroAction, TapDance, VialAction};
 use device::{get_device, unlock_device};
-use hidapi::{HidApi, HidDevice};
+use hidapi::HidApi;
 use keys::keys::{Key, KeyIndex};
 use parser::VialItem;
-use serde_json::Value;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    io::Write,
-    ops::Deref,
-    str::FromStr,
-};
+use std::{collections::HashMap, ops::Deref};
 use vitaly::protocol;
 impl Layout {
     fn sorted_layers(&self) -> Result<Vec<&Layer>, String> {

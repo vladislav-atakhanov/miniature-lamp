@@ -1,4 +1,3 @@
-use keys::keys::{Key, KeyIndex};
 use parser::Keyboard;
 use s_expression::Expr::*;
 use std::{
@@ -195,9 +194,7 @@ impl FromStr for Layout {
                         let [Atom(id)] = params else {
                             return Err("Syntax error".to_string());
                         };
-                        let content = std::fs::read_to_string(format!("./keyboards/{}.txt", id))
-                            .map_err(|e| e.to_string())?;
-                        layout.keyboard = parser::parse(content.as_str())?;
+                        layout.keyboard = parser::parse(id)?;
                         let src = Layer::from_keyboard(&layout.keyboard.source);
                         layout.layers.insert(src.name.to_string(), src);
                     }

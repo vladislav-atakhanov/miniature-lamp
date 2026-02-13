@@ -1,6 +1,7 @@
 use keys::keys::Key;
 use s_expression::Expr;
 
+#[allow(unused)]
 #[rustfmt::skip]
 #[derive(Debug)]
 struct Item {
@@ -9,6 +10,7 @@ struct Item {
     r: f32, rx: f32, ry: f32
 }
 
+#[allow(unused)]
 #[derive(Debug, Default)]
 pub struct Matrix(Vec<Item>);
 

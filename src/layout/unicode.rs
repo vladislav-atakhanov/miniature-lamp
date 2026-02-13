@@ -1,8 +1,6 @@
 use super::{Action, Keymap};
-use keys::keys::Key;
-use log::warn;
 use s_expression::Expr::*;
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 pub fn unicode(
     ch: &char,
@@ -77,22 +75,5 @@ pub fn unicode(
         }
     }
 
-    todo!("raw unicode {:?}", ch);
-    Ok(if ch.is_ascii() && !ch.is_control() {
-        let digits = (*ch as u8).to_string();
-        let mut res = Vec::with_capacity(digits.len() + 2);
-        res.push(Action::Hold(Key::LeftAlt));
-
-        digits.chars().try_for_each(|c| match c {
-            '0'..='9' => {
-                res.push(Action::Tap(Key::from_digit(c)));
-                Ok(())
-            }
-            _ => Err(format!("Expected digit, found {:?}", c)),
-        })?;
-        res.push(Action::Release(Key::LeftAlt));
-        Action::Sequence(res)
-    } else {
-        Action::Unicode(*ch)
-    })
+    Ok(Action::Unicode(*ch))
 }

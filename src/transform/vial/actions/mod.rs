@@ -1,10 +1,5 @@
 mod macros;
 mod tapdance;
-use std::fmt::Pointer;
-
-use crate::layout::Action;
-use keys::keys::Key;
-
 pub use super::keycode::Keycode;
 pub use macros::{Macro, MacroAction};
 pub use tapdance::TapDance;
