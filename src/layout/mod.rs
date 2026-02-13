@@ -1,7 +1,10 @@
 use keys::keys::{Key, KeyIndex};
 use parser::Keyboard;
 use s_expression::Expr::*;
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 mod action;
 mod layer;
@@ -66,12 +69,15 @@ impl Layout {
             }
         }
         self.layers.remove("src");
+
         let new_layers: Vec<Layer> = self
             .layers
             .iter()
             .flat_map(|(_, l)| {
                 let deps = l.get_dependencies();
-                deps.iter()
+                let mut copies = HashSet::<String>::new();
+                let mut new = deps
+                    .iter()
                     .filter_map(|name| {
                         let dep = self.layers.get(*name)?;
                         if dep.keymap == l.keymap {
@@ -84,12 +90,36 @@ impl Layout {
                             return None;
                         }
                         let mut new = dep.clone();
+                        let new_name = format!("{}-{:?}", dep.name, l.keymap).to_lowercase();
+                        new.name = new_name.clone();
+
+                        new.keys.values_mut().for_each(|v| {
+                            if let Action::LayerWhileHeld(x) = v
+                                && x == name
+                            {
+                                *v = Action::LayerWhileHeld(new_name.clone())
+                            }
+                        });
+
                         new.keymap = l.keymap.clone();
-                        new.name = format!("{}-{:?}", dep.name, l.keymap).to_lowercase();
                         new.index += 1;
+                        copies.insert(dep.name.clone());
                         Some(new)
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
+                if new.len() > 0 {
+                    let mut s = l.clone();
+                    s.keys.values_mut().for_each(|v| {
+                        if let Action::LayerWhileHeld(x) = v
+                            && copies.contains(x)
+                        {
+                            let name = format!("{}-{:?}", x, l.keymap).to_lowercase();
+                            *v = Action::LayerWhileHeld(name)
+                        }
+                    });
+                    new.push(s);
+                }
+                new
             })
             .collect();
 
@@ -221,7 +251,6 @@ impl FromStr for Layout {
                             .chunks(2)
                             .map(|x| {
                                 let [Atom(src), expr] = x else {
-                                    println!("{:?}", x);
                                     return Err(format!("Syntax error: {:?}", x));
                                 };
                                 let Action::Multi(src) = Action::from_expr(&Atom(*src))? else {
