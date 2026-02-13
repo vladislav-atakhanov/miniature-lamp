@@ -12,8 +12,8 @@ pub enum Item {
 pub struct Vial(HashMap<KeyIndex, Item>);
 
 impl Vial {
-    fn add(&mut self, item: Item) -> Option<Item> {
-        self.0.insert(self.0.len().try_into().ok()?, item)
+    fn insert(&mut self, index: KeyIndex, item: Item) -> Option<Item> {
+        self.0.insert(index, item)
     }
     pub fn ok_or<E>(&self, e: E) -> Result<&HashMap<KeyIndex, Item>, E> {
         if self.0.len() > 0 {
@@ -49,7 +49,10 @@ pub fn parse<'a>(items: &[Expr<'a>]) -> Result<Vial, String> {
             _ => None,
         };
 
-        match vial.add(item.ok_or(format!("Unexpected {:?}", row))?) {
+        match vial.insert(
+            i.try_into().map_err(|_| format!("Invalid index {}", i))?,
+            item.ok_or(format!("Unexpected {:?}", row))?,
+        ) {
             None => {}
             _ => return Err(format!("Key {:?} already in map", key)),
         }

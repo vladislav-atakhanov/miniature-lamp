@@ -7,8 +7,8 @@ use vitaly::keycodes::name_to_qid;
 pub struct Keycode(pub u16);
 
 impl Keycode {
-    pub fn from_key(key: Key, version: u32) -> Result<Self, String> {
-        Self::from_name(key_to_string(&key).to_string(), version)
+    pub fn from_key(key: &Key, version: u32) -> Result<Self, String> {
+        Self::from_name(key_to_string(key).to_string(), version)
     }
     pub fn from_name(name: String, version: u32) -> Result<Self, String> {
         name_to_qid(name.as_str(), version)
