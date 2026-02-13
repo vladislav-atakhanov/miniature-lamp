@@ -107,13 +107,7 @@ impl Layout {
                 layer.keymap
             ))?;
             for action in layer.keys.values_mut() {
-                let Action::Unicode(ch) = action else {
-                    continue;
-                };
-                print!("{:?}: {:?} => ", layer.keymap, ch);
-                let a = unicode(ch, &layer.keymap, en, current)?;
-                println!("{:?}", a);
-                *action = a;
+                *action = resolve_unicode(action, &layer.keymap, en, current)?;
             }
             Ok::<_, String>(())
         })?;
@@ -270,6 +264,34 @@ impl FromStr for Layout {
         layout.prepare_layers(&aliases)?;
         Ok(layout)
     }
+}
+
+fn resolve_unicode(
+    action: &Action,
+    keymap: &Keymap,
+    en: &Action,
+    current: &Action,
+) -> Result<Action, String> {
+    Ok(match action {
+        Action::Unicode(ch) => unicode(ch, keymap, en, current)?,
+        Action::TapHold(tap, hold) => Action::TapHold(
+            Box::new(resolve_unicode(tap, keymap, en, current)?),
+            Box::new(resolve_unicode(hold, keymap, en, current)?),
+        ),
+        Action::Multi(actions) => Action::Multi(
+            actions
+                .iter()
+                .map(|a| resolve_unicode(a, keymap, en, current))
+                .collect::<Result<_, _>>()?,
+        ),
+        Action::Sequence(actions) => Action::Sequence(
+            actions
+                .iter()
+                .map(|a| resolve_unicode(a, keymap, en, current))
+                .collect::<Result<_, _>>()?,
+        ),
+        other => other.clone(),
+    })
 }
 
 fn check_all_with<T, F>(src: &[T], predicate: F) -> Result<(), &T>
