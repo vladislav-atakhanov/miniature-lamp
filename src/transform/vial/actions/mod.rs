@@ -6,7 +6,6 @@ use crate::layout::Action;
 use keys::keys::Key;
 
 pub use super::keycode::Keycode;
-use super::keycode::{format_mods, key_to_mod, key_to_string};
 pub use macros::{Macro, MacroAction};
 pub use tapdance::TapDance;
 

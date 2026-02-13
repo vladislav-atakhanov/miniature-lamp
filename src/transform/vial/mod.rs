@@ -2,6 +2,9 @@ mod keycode;
 use keycode::{Keycode, format_mods, key_to_mod, key_to_string};
 mod actions;
 mod device;
+mod overrides;
+use log::warn;
+use overrides::Override;
 
 use super::graph::{Node, priority_topo_sort};
 use crate::layout::{Action, Layer, Layout};
@@ -15,6 +18,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     io::Write,
+    ops::Deref,
     str::FromStr,
 };
 use vitaly::protocol;
@@ -59,6 +63,7 @@ impl Layout {
             layers: &layers_by_name,
             macros: Default::default(),
             tap_dances: Default::default(),
+            overrides: Default::default(),
             version: 6,
         };
 
@@ -76,6 +81,12 @@ impl Layout {
                 let layer_index = layers_by_name
                     .get(layer.name.as_str())
                     .ok_or(format!("Layer {:?} not found", layer.name))?;
+
+                layer.overrides.iter().for_each(|o| {
+                    _ = vial
+                        .add_override(*layer_index, o)
+                        .map_err(|e| warn!("{}", e.to_string()));
+                });
                 Ok::<_, String>((*layer_index, keys))
             })
             .collect::<Result<_, _>>()?;
@@ -118,6 +129,21 @@ impl Layout {
             })
             .collect();
 
+        println!("{:#?}", vial.overrides);
+
+        let key_overrides = vial
+            .overrides
+            .iter()
+            .enumerate()
+            .map(|(i, (o, l))| o.to_key_override(*l, i))
+            .collect::<Vec<_>>();
+
+        key_overrides.iter().try_for_each(|o| {
+            o.dump(capabilities.vial_version)
+                .map(|_| println!())
+                .map_err(|e| e.to_string())
+        })?;
+
         if capabilities.vial_version > 0 {
             unlock_device(&device, &meta, false)?;
             unlock_device(&device, &meta, true)?;
@@ -154,8 +180,15 @@ impl Layout {
 
         tap_dances
             .iter()
-            .try_for_each(|td| protocol::set_tap_dance(&device, td).map_err(|e| e.to_string()))?;
+            .try_for_each(|td| protocol::set_tap_dance(&device, td))
+            .map_err(|e| e.to_string())?;
         println!("Tap dance");
+
+        key_overrides
+            .iter()
+            .try_for_each(|o| protocol::set_key_override(&device, o))
+            .map_err(|e| e.to_string())?;
+        println!("Key overrides");
 
         if capabilities.vial_version > 0 {
             unlock_device(&device, &meta, false)?;
@@ -168,11 +201,71 @@ struct Vial<'a> {
     macros: HashMap<Macro, u8>,
     tap_dances: HashMap<TapDance, u8>,
     layers: &'a HashMap<&'a str, usize>,
+    overrides: HashMap<Override, u16>,
     version: u32,
 }
 impl<'a> Vial<'a> {
     fn layer_by_name(&self, name: &str) -> Option<usize> {
         self.layers.get(name).map(|x| *x)
+    }
+    pub fn add_override(
+        &mut self,
+        layer: usize,
+        o: &crate::layout::Override,
+    ) -> Result<(), String> {
+        let (target, target_mods): (Keycode, Vec<Key>) = match &o.action {
+            Action::Tap(key) => (Keycode::from_key(key, self.version)?, vec![]),
+            Action::NoAction => (Keycode(0), vec![]),
+            Action::TapHold(action, _) => match action.deref() {
+                Action::Tap(key) => (Keycode::from_key(key, self.version)?, vec![]),
+                _ => {
+                    return Err(format!(
+                        "Action {:?} is not supported in override",
+                        o.action
+                    ));
+                }
+            },
+            Action::Multi(elems) => {
+                let taps: Vec<_> = elems
+                    .iter()
+                    .map_while(|a| {
+                        if let Action::Tap(k) = a {
+                            Some(k)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let err = Err(format!(
+                    "Action {:?} is not supported in override",
+                    o.action
+                ));
+                if taps.len() != elems.len() {
+                    return err;
+                }
+                let (mods, keys): (Vec<Key>, Vec<Key>) =
+                    taps.into_iter().partition(|k| k.is_modifier());
+                let [tap] = keys.as_slice() else {
+                    return err;
+                };
+                (Keycode::from_key(tap, self.version)?, mods)
+            }
+            _ => {
+                return Err(format!(
+                    "Action {:?} is not supported in override",
+                    o.action
+                ));
+            }
+        };
+        let o = Override {
+            source: Keycode::from_key(&o.key, self.version)?,
+            target: target,
+            source_mods: o.mods.clone(),
+            target_mods: target_mods,
+        };
+        let entry = self.overrides.entry(o).or_insert(0);
+        *entry |= 1 << layer;
+        Ok(())
     }
 
     pub fn action_to_vial(&mut self, action: &Action) -> Result<VialAction, String> {

@@ -127,18 +127,17 @@ impl Layout {
             self.layers.insert(l.name.to_string(), l);
         });
 
-        let en = self
-            .keymaps
-            .get(&Keymap::En)
-            .ok_or("Hotkey to switch En keymap not found".to_string())?;
         self.layers.values_mut().try_for_each(|layer| {
-            let current = self.keymaps.get(&layer.keymap).ok_or(format!(
-                "Hotkey to switch {:?} keymap not found",
-                layer.keymap
-            ))?;
-            for action in layer.keys.values_mut() {
-                *action = resolve_unicode(action, &layer.keymap, en, current)?;
-            }
+            layer.keys.values_mut().try_for_each(|action| {
+                resolve_unicode(action, &layer.keymap, &self.keymaps).map(|a| {
+                    *action = a;
+                })
+            })?;
+            layer.overrides.iter_mut().try_for_each(|o| {
+                resolve_unicode(&o.action, &layer.keymap, &self.keymaps).map(|a| {
+                    o.action = a.clone();
+                })
+            })?;
             Ok::<_, String>(())
         })?;
 
@@ -247,6 +246,7 @@ impl FromStr for Layout {
                         let (name, parent, params) = Layer::get_name(params)?;
                         let mut layer =
                             layout.layer_from(parent.to_string(), name.to_string(), i)?;
+
                         layer.overrides = params
                             .chunks(2)
                             .map(|x| {
@@ -269,15 +269,14 @@ impl FromStr for Layout {
                                 };
 
                                 check_all_with(mods, |k| k.is_modifier())
-                                    .map_err(|k| format!("Key {:?} is not modifier", k))?;
+                                    .map_err(|k| format!("Expected modifier, found {:?}", k))?;
+
+                                if !layout.keyboard.source.contains_key(key) {
+                                    return Err(format!("Key {:?} not in source map", key));
+                                }
 
                                 Ok(Override {
-                                    key: layout
-                                        .keyboard
-                                        .source
-                                        .get(key)
-                                        .ok_or(format!("Key {:?} is not found", key))?
-                                        .clone(),
+                                    key: key.clone(),
                                     action: Action::from_expr(expr)?,
                                     mods: mods.to_vec(),
                                 })
@@ -297,26 +296,25 @@ impl FromStr for Layout {
 
 fn resolve_unicode(
     action: &Action,
-    keymap: &Keymap,
-    en: &Action,
-    current: &Action,
+    lang: &Keymap,
+    keymaps: &HashMap<Keymap, Action>,
 ) -> Result<Action, String> {
     Ok(match action {
-        Action::Unicode(ch) => unicode(ch, keymap, en, current)?,
+        Action::Unicode(ch) => unicode(ch, lang, keymaps)?,
         Action::TapHold(tap, hold) => Action::TapHold(
-            Box::new(resolve_unicode(tap, keymap, en, current)?),
-            Box::new(resolve_unicode(hold, keymap, en, current)?),
+            Box::new(resolve_unicode(tap, lang, keymaps)?),
+            Box::new(resolve_unicode(hold, lang, keymaps)?),
         ),
         Action::Multi(actions) => Action::Multi(
             actions
                 .iter()
-                .map(|a| resolve_unicode(a, keymap, en, current))
+                .map(|a| resolve_unicode(a, lang, keymaps))
                 .collect::<Result<_, _>>()?,
         ),
         Action::Sequence(actions) => Action::Sequence(
             actions
                 .iter()
-                .map(|a| resolve_unicode(a, keymap, en, current))
+                .map(|a| resolve_unicode(a, lang, keymaps))
                 .collect::<Result<_, _>>()?,
         ),
         other => other.clone(),

@@ -10,7 +10,7 @@ use s_expression::Expr::{self, *};
 
 #[derive(Debug, Clone)]
 pub struct Override {
-    pub key: KeyIndex,
+    pub key: Key,
     pub mods: Vec<Key>,
     pub action: Action,
 }

@@ -6,15 +6,14 @@ use std::{collections::HashMap, str::FromStr};
 
 pub fn unicode(
     ch: &char,
-    keymap: &Keymap,
-    en_hotkey: &Action,
-    lang_hotkey: &Action,
+    lang: &Keymap,
+    keymaps: &HashMap<Keymap, Action>,
 ) -> Result<Action, String> {
     let content = format!("({})", include_str!("unicode.txt"));
     let expr = s_expression::from_str(content.as_str()).map_err(|_| "Parse error")?;
     let list = expr.list()?;
 
-    let keymaps = list.iter().try_fold(
+    let lang_chars = list.iter().try_fold(
         HashMap::<Keymap, HashMap<char, Action>>::with_capacity(list.len()),
         |mut acc, l| {
             let list = l.list()?;
@@ -60,26 +59,25 @@ pub fn unicode(
         },
     )?;
 
-    if let Some(chars) = keymaps.get(keymap) {
+    if let Some(chars) = lang_chars.get(lang) {
         if let Some(a) = chars.get(ch) {
             return Ok(a.clone());
         }
     };
-    let chars = keymaps
-        .get(&Keymap::En)
-        .ok_or(format!("Symbols for {:?} not found", keymap))?;
-    if let Some(a) = chars.get(ch) {
-        return Ok(Action::Sequence(
-            [en_hotkey.clone(), a.clone(), lang_hotkey.clone()].to_vec(),
-        ));
-    }
-    if let Ok(key) = Key::from_str(format!("{}", ch).as_str()) {
-        return Ok(Action::Sequence(
-            [en_hotkey.clone(), Action::Tap(key), lang_hotkey.clone()].to_vec(),
-        ));
+
+    if let Some(lang_hotkey) = keymaps.get(lang) {
+        for (lang, action) in keymaps.iter() {
+            if let Some(chars) = lang_chars.get(lang) {
+                if let Some(a) = chars.get(ch) {
+                    return Ok(Action::Sequence(
+                        [action.clone(), a.clone(), lang_hotkey.clone()].to_vec(),
+                    ));
+                }
+            }
+        }
     }
 
-    warn!("raw unicode {:?}", ch);
+    todo!("raw unicode {:?}", ch);
     Ok(if ch.is_ascii() && !ch.is_control() {
         let digits = (*ch as u8).to_string();
         let mut res = Vec::with_capacity(digits.len() + 2);

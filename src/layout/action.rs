@@ -20,9 +20,6 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn taps(keys: Vec<Key>) -> Self {
-        Self::Multi(keys.iter().map(|k| Action::Tap(k.clone())).collect())
-    }
     pub fn resolve_aliases(&self, aliases: &HashMap<String, Action>) -> Result<Action, String> {
         let res = match self {
             Action::Alias(name) => aliases

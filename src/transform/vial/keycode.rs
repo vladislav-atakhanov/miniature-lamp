@@ -1,10 +1,16 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Debug};
 
 use keys::keys::Key;
-use vitaly::keycodes::name_to_qid;
+use vitaly::keycodes::{name_to_qid, qid_to_name};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Keycode(pub u16);
+
+impl Debug for Keycode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        qid_to_name(self.0, 6).fmt(f)
+    }
+}
 
 impl Keycode {
     pub fn from_key(key: &Key, version: u32) -> Result<Self, String> {
