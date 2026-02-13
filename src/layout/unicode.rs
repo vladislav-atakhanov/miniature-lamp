@@ -74,8 +74,11 @@ pub fn unicode(
         ));
     }
     if let Ok(key) = Key::from_str(format!("{}", ch).as_str()) {
-        return Ok(Action::Tap(key));
+        return Ok(Action::Sequence(
+            [en_hotkey.clone(), Action::Tap(key), lang_hotkey.clone()].to_vec(),
+        ));
     }
+
     warn!("raw unicode {:?}", ch);
     Ok(if ch.is_ascii() && !ch.is_control() {
         let digits = (*ch as u8).to_string();
