@@ -122,20 +122,12 @@ impl Layout {
             })
             .collect();
 
-        println!("{:#?}", vial.overrides);
-
         let key_overrides = vial
             .overrides
             .iter()
             .enumerate()
             .map(|(i, (o, l))| o.to_key_override(*l, i))
             .collect::<Vec<_>>();
-
-        key_overrides.iter().try_for_each(|o| {
-            o.dump(capabilities.vial_version)
-                .map(|_| println!())
-                .map_err(|e| e.to_string())
-        })?;
 
         if capabilities.vial_version > 0 {
             unlock_device(&device, &meta, false)?;
