@@ -128,7 +128,7 @@ impl FromStr for Key {
             "Insert" | "ins" => Self::Insert,
             "Home" | "home" => Self::Home,
             "PageUp" | "pgup" => Self::PageUp,
-            "Numlock" => Self::Numlock,
+            "nlck" | "Numlock" => Self::Numlock,
 
             "Tab" | "tab" => Self::Tab,
             "KeyQ" | "q" => Self::Q,
