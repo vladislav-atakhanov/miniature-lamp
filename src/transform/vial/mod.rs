@@ -169,12 +169,20 @@ impl Layout {
             .iter()
             .try_for_each(|td| protocol::set_tap_dance(&device, td))
             .map_err(|e| e.to_string())?;
+        for i in tap_dances.len() as u8..capabilities.tap_dance_count {
+            protocol::set_tap_dance(&device, &protocol::TapDance::empty(i))
+                .map_err(|e| e.to_string())?;
+        }
         println!("Tap dance");
 
         key_overrides
             .iter()
             .try_for_each(|o| protocol::set_key_override(&device, o))
             .map_err(|e| e.to_string())?;
+        for i in key_overrides.len() as u8..capabilities.key_override_count {
+            protocol::set_key_override(&device, &protocol::KeyOverride::empty(i))
+                .map_err(|e| e.to_string())?;
+        }
         println!("Key overrides");
 
         if capabilities.vial_version > 0 {
