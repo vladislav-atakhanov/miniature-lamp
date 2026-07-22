@@ -8,7 +8,7 @@ pub enum Key {
     Grave,     One,      Two,     Three, Four, Five, Six, Seven,  Eight, Nine, Zero,      Minus,       Equal,        Backspace, Insert, Home,       PageUp,   Numlock, KpSlash, KpAsterisk, KpMinus,
     Tab,       Q,        W,       E,     R,    T,    Y,   U,      I,     O,    P,         LeftBracket, RightBracket, Backslash, Delete, End,        PageDown, Kp7,     Kp8,     Kp9,        KpPlus,
     CapsLock,  A,        S,       D,     F,    G,    H,   J,      K,     L,    Semicolon, Apostrophe,                    Enter,                               Kp4,     Kp5,     Kp6,
-    LeftShift, Z,        X,       C,     V,    B,    N,   M,      Comma, Dot,  Slash,                               RightShift,         Up,                   Kp1,     Kp2,     Kp3,        KpEqual,
+    LeftShift, IntlBackslash, Z,        X,       C,     V,    B,    N,   M,      Comma, Dot,  Slash,                RightShift,         Up,                   Kp1,     Kp2,     Kp3,        KpEqual,
     LeftCtrl,  LeftMeta, LeftAlt, Space,                                       RightAlt,  RightMeta,   Menu,         RightCtrl, Left,   Down,       Right,    Kp0,              KpDot,      KpEnter,
 
     // Media
@@ -144,6 +144,7 @@ impl FromStr for Key {
             "BracketLeft" | "[" => Self::LeftBracket,
             "BracketRight" | "]" => Self::RightBracket,
             "Backslash" | "\\" => Self::Backslash,
+            "IntlBackslash" | "i\\" => Self::IntlBackslash,
             "Delete" | "del" => Self::Delete,
             "End" | "end" => Self::End,
             "PageDown" | "pgdn" => Self::PageDown,

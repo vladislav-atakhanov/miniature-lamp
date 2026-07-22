@@ -171,6 +171,7 @@ pub fn key_to_string(key: &Key) -> &str {
         Key::Comma => "KC_COMMA",
         Key::Dot => "KC_DOT",
         Key::Slash => "KC_SLASH",
+        Key::IntlBackslash => "KC_NONUS_BACKSLASH",
         Key::RightShift => "KC_RIGHT_SHIFT",
         Key::Up => "KC_UP",
 

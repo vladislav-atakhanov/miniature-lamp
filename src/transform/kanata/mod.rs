@@ -265,6 +265,7 @@ fn key_to_kanata(key: &Key) -> String {
         Key::LeftBracket => "[".into(),
         Key::RightBracket => "]".into(),
         Key::Backslash => "\\".into(),
+        Key::IntlBackslash => "non_us_backslash".into(),
         Key::Delete => "del".into(),
         Key::End => "end".into(),
         Key::CapsLock => "caps".into(),
