@@ -13,6 +13,7 @@ pub struct Override {
 pub enum Keymap {
     En,
     Ru,
+    Kk,
 }
 
 impl Default for Keymap {
@@ -26,6 +27,7 @@ impl FromStr for Keymap {
         Ok(match s.to_lowercase().as_str() {
             "ru" => Self::Ru,
             "en" => Self::En,
+            "kk" => Self::Kk,
             _ => return Err(()),
         })
     }

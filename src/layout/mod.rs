@@ -90,7 +90,7 @@ impl Layout {
                         }
                         if dep.keys.iter().all(|(_, v)| match l.keymap {
                             Keymap::En => false,
-                            Keymap::Ru => !v.contains_unicode(),
+                            _ => !v.contains_unicode(),
                         }) {
                             return None;
                         }
