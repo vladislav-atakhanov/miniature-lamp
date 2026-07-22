@@ -41,7 +41,7 @@ fn load_lang_chars() -> Result<HashMap<Keymap, HashMap<char, Action>>, String> {
                     HashMap::with_capacity(params.len() / 2),
                     |mut acc, c| {
                         let [Atom(ch), action] = c else {
-                            unreachable!()
+                            return Err(format!("Expected atom, found {:?}", c));
                         };
 
                         let ch = match *ch {
