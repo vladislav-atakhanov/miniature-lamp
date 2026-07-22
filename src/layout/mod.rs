@@ -237,20 +237,17 @@ impl FromStr for Layout {
                             let [Atom(layer), Atom(keymap), act] = x else {
                                 return Err(format!("Syntax error: {:?}", x));
                             };
-                            let layer = layout
-                                .layers
-                                .get_mut(*layer)
-                                .ok_or(format!("Layer {:?} not found", layer))?;
 
                             let keymap: Keymap = keymap
                                 .parse()
                                 .map_err(|_| format!("Unknown keymap {:?}", keymap))?;
 
                             let action = Action::from_expr(act)?;
-
                             layout.keymaps.insert(keymap.clone(), action);
-                            layer.keymap = keymap.clone();
-
+                            layout
+                                .layers
+                                .get_mut(*layer)
+                                .map(|layer| layer.keymap = keymap.clone());
                             Ok(())
                         })?;
                     }
